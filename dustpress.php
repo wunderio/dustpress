@@ -2,11 +2,11 @@
 /*
 Plugin Name: DustPress
 Plugin URI: http://www.geniem.com
-Description: Dust.js templating system for WordPress
-Author: Miika Arponen & Ville Siltala / Geniem Oy
-Author URI: http://www.geniem.com
+Description: Twig templating system for WordPress
+Author: Miika Arponen / Wunder Finland Oy
+Author URI: http://www.wunder.io
 License: GPLv3
-Version: 1.36.5
+Version: 2.0.0
 */
 
 final class DustPress {
@@ -14,8 +14,8 @@ final class DustPress {
     // Singleton DustPress instance
     private static $instance;
 
-    // Instance of DustPHP
-    public $dust;
+    // Instance of Twig
+    public $twig;
 
     // Main model
     private $model;
@@ -93,8 +93,11 @@ final class DustPress {
 
         $this->register_autoloaders();
 
-        // Create a DustPHP instance
-        $this->dust = new Dust\Dust();
+        // Create a Twig instance
+        $loader = new \Twig\Loader\FilesystemLoader();
+        $this->twig = new \Twig\Environment($loader, [
+            'cache' => get_template_directory() . '/twig_cache', // Optional caching
+        ]);
 
         // Dust template paths will be stored here so the filesystem has to be scanned only once.
         $this->templates = [];
@@ -102,8 +105,8 @@ final class DustPress {
         $this->add_theme_paths();
         $this->add_core_paths();
 
-        // Add the fetched paths to the Dust instance.
-        $this->dust->includedDirectories = $this->get_template_paths( 'partials' );
+        // Add the fetched paths to the Twig instance.
+        $this->twig->getLoader()->setPaths( $this->get_template_paths( 'partials' ) );
 
         // Find and include Dust helpers and filters from DustPress plugin
         $paths = [
@@ -787,41 +790,19 @@ final class DustPress {
         }
 
         $types = array(
-            'html' => function( $data, $partial, $dust ) {
-
+            'html' => function( $data, $partial, $twig ) {
                 try {
-                    if ( apply_filters( 'dustpress/cache/partials', false ) && apply_filters( 'dustpress/cache/partials/' . $partial, true ) ) {
-                        if ( ! ( $compiled = wp_cache_get( $partial, 'dustpress/partials' ) ) ) {
-                            $compiled = $dust->compileFile( $partial );
-
-                            wp_cache_set( $partial, $compiled, 'dustpress/partials' );
-                        }
-                    }
-                    else {
-                        $compiled = $dust->compileFile( $partial );
-                    }
-                }
-                catch ( Exception $e ) {
+                    return $twig->render($partial . '.twig', $data);
+                } catch (\Twig\Error\LoaderError $e) {
                     http_response_code(500);
-                    die( 'DustPress error: '. $e->getMessage() );
+                    die('Twig error: Template not found - ' . $e->getMessage());
+                } catch (\Twig\Error\RuntimeError $e) {
+                    http_response_code(500);
+                    die('Twig runtime error: ' . $e->getMessage());
+                } catch (\Twig\Error\SyntaxError $e) {
+                    http_response_code(500);
+                    die('Twig syntax error: ' . $e->getMessage());
                 }
-
-                if ( apply_filters( 'dustpress/cache/rendered', false ) && apply_filters( 'dustpress/cache/rendered/' . $partial, true ) ) {
-                    $data_hash = sha1( serialize( $compiled ) . serialize( $data ) );
-
-                    $cache_time = apply_filters( 'dustpress/settings/partial/' . $partial, $this->get_setting( 'rendered_expire_time' ) );
-
-                    if ( ! ( $rendered = wp_cache_get( $data_hash, 'dustpress/rendered' ) ) ) {
-                        $rendered = $dust->renderTemplate( $compiled, $data );
-
-                        wp_cache_set( $data_hash, $rendered, 'dustpress/rendered', $cache_time );
-                    }
-                }
-                else {
-                    $rendered = $dust->renderTemplate( $compiled, $data );
-                }
-
-                return $rendered;
             },
             'json' => function( $data, $partial, $dust ) {
                 try {
@@ -849,12 +830,12 @@ final class DustPress {
 
         if ( apply_filters( 'dustpress/formats/use_dust/' . $type, false ) ) {
             // Ensure we have a DustPHP instance.
-            if ( isset( $this->dust ) ) {
-                $dust = $this->dust;
+            if ( isset( $this->twig ) ) {
+                $twig = $this->twig;
             }
             else {
                 http_response_code(500);
-                die( 'DustPress error: Something very unexpected happened: there is no DustPHP.' );
+                die( 'DustPress error: Something very unexpected happened: there is no Twig instance.' );
             }
 
             if ( ! isset( $args['partial'] ) ) {
@@ -869,10 +850,6 @@ final class DustPress {
             // Fetch Dust partial by given name. Throw error if there is something wrong.
             try {
                 $template = $this->get_template( $partial );
-
-                $helpers = $this->prerender( $partial );
-
-                $this->prerun_helpers( $helpers );
             }
             catch ( Exception $e ) {
                 http_response_code(500);
@@ -880,7 +857,7 @@ final class DustPress {
             }
         }
         else {
-            $dust = null;
+            $twig = null;
             $template = $partial;
         }
 
@@ -896,7 +873,7 @@ final class DustPress {
         }
 
         // Create output with wanted format.
-        $output = call_user_func_array( $types[$type], array( $render_data, $template, $dust ) );
+        $output = call_user_func_array( $types[$type], array( $render_data, $template, $twig ) );
 
         // Filter output
         $output = apply_filters( 'dustpress/output', $output, $options );
@@ -953,7 +930,7 @@ final class DustPress {
             return $partial;
         }
         else {
-            $templatefile =  $partial . '.dust';
+            $templatefile =  $partial . '.twig';
 
             $templates = $this->get_templates();
 
@@ -1481,69 +1458,6 @@ final class DustPress {
     }
 
     /**
-    *  This function loops through the wanted partial and finds all helpers that are used.
-    *  It is used recursively.
-    *
-    *  @type	function
-    *  @date	17/12/2015
-    *  @since	0.3.0
-    *
-    *  @param   string $partial
-    *  @param   $already (array|string) (optional)
-    *  @return	$helpers (array|string)
-    */
-    public function prerender( $partial, $already = [] ) {
-        $performance_measure_id = $this->start_dustpress_performance( __FUNCTION__ );
-
-        $filename = $this->get_prerender_file( $partial );
-
-        if ( $filename == false ) return;
-
-        $file = file_get_contents( $filename );
-
-        if ( in_array( $file, $already) ) {
-            $this->save_dustpress_performance( $performance_measure_id );
-
-            return;
-        }
-
-        $already[] = $file;
-
-        $helpers = [];
-
-        // Get helpers
-        preg_match_all( '/\{@(\w+)/', $file, $findings );
-
-        $helpers = array_merge( $helpers, array_unique( $findings[1] ) );
-
-        // Get includes
-        preg_match_all( '/\{>["\']?([-a-zA-z0-9\/]+)?/', $file, $includes);
-
-        foreach( $includes[1] as $include ) {
-            $incl_explode = explode( DIRECTORY_SEPARATOR, $include );
-
-            $include = array_pop( $incl_explode );
-
-            $include_helpers = $this->prerender( $include, $already );
-
-            if ( is_array( $include_helpers ) ) {
-                $helpers = array_merge( $helpers, array_unique( $include_helpers ) );
-            }
-        }
-
-        if ( is_array( $helpers ) ) {
-            $return_value = array_unique( $helpers );
-        }
-        else {
-            $return_value = [];
-        }
-
-        $this->save_dustpress_performance( $performance_measure_id );
-
-        return $return_value;
-    }
-
-    /**
     *  This function is used to get a template file to prerender.
     *
     *  @type	function
@@ -1568,39 +1482,6 @@ final class DustPress {
         $this->save_dustpress_performance( $performance_measure_id );
 
         return $return_value;
-    }
-
-    /**
-    *  This function executes dummy runs through all wanted helpers to enqueue scripts they need.
-    *
-    *  @type	function
-    *  @date	17/12/2015
-    *  @since	0.3.0
-    *
-    *  @param   array|string $helpers
-    */
-    public function prerun_helpers( $helpers ) {
-        $performance_measure_id = $this->start_dustpress_performance( __FUNCTION__ );
-
-        if ( is_array( $helpers ) ) {
-            $dummyEvaluator = new Dust\Evaluate\Evaluator( $this->dust );
-            $dummyChunk = new Dust\Evaluate\Chunk( $dummyEvaluator );
-            $dummyContext = new Dust\Evaluate\Context( $dummyEvaluator );
-            $dummySection = new Dust\Ast\Section( null );
-            $dummyBodies = new Dust\Evaluate\Bodies( $dummySection );
-            $dummyParameters = new Dust\Evaluate\Parameters( $dummyEvaluator, $dummyContext );
-
-            foreach( $this->dust->helpers as $name => $helper ) {
-                if ( in_array( $name, $helpers) ) {
-                    if ( ( $helper instanceof \Closure ) || ( $helper instanceof \DustPress\Helper ) ) {
-                        $dummyBodies->dummy = true;
-                        call_user_func( $helper, $dummyChunk, $dummyContext, $dummyBodies, $dummyParameters );
-                    }
-                }
-            }
-        }
-
-        $this->save_dustpress_performance( $performance_measure_id );
     }
 
     /**
