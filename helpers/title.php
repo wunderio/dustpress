@@ -2,11 +2,11 @@
 namespace DustPress;
 
 class Title extends Helper {
-    public function output() {
+    public function init( string $content, array $params ): string {
 		ob_start();
 		the_title();
 		return ob_get_clean();
     }
 }
 
-$this->add_helper( 'title', new Title() );
+Helper::register( dustpress()->twig, 'title', Title::class );

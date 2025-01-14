@@ -2,16 +2,16 @@
 namespace DustPress;
 
 class Content extends Helper {
-    public function output() {
+    public function init( string $content, array $params ): string {
         global $post;
 
-        if ( isset( $this->params->data ) ) {
-            return apply_filters( 'the_content', $this->params->data );
+        if ( isset( $params['data'] ) ) {
+            return apply_filters( 'the_content', $params['data'] );
         } else {
-            if ( isset( $this->params->id ) ) {
-                $post = get_post( $this->params->id );
+            if ( isset( $params['id'] ) ) {
+                $post = get_post( $params['id'] );
             }
-            
+
             ob_start();
             setup_postdata( $post );
             the_content();
@@ -21,4 +21,4 @@ class Content extends Helper {
     }
 }
 
-$this->add_helper( 'content', new Content() );
+Helper::register( dustpress()->twig, 'content', Content::class );

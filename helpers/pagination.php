@@ -29,26 +29,25 @@ class Pagination extends Helper {
      *
      * @return string
      */
-    public function output() {
+    public function init( string $content, array $params ): string {
 
-        $params         = $this->params;
         $data           = (object) [];
         $pages          = array();
-        $neighbours     = isset( $params->neighbours ) ? (int) $params->neighbours : 3;
+        $neighbours     = isset( $params['neighbours'] ) ? (int) $params['neighbours'] : 3;
         $visible        = 1 + ( 2 * $neighbours );
         $hellip_start   = true;
         $hellip_end     = true;
-        $strings        = isset( $params->strings ) ? $params->strings    : [];
-        $cur_page       = isset( $params->page )    ? (int) $params->page : 1;
+        $strings        = isset( $params['strings'] ) ? $params['strings']    : [];
+        $cur_page       = isset( $params['page'] )    ? (int) $params['page'] : 1;
         $prev_page      = $cur_page - 1;
         $next_page      = $cur_page + 1;
-        $per_page       = (int) $params->per_page;
-        $items          = (int) $params->items;
-        $hash           = $params->hash     ? '#' . $params->hash : '';
-        $this->page_var = $params->page_var ? $params->page_var   : 'paged';
+        $per_page       = (int) $params['per_page'];
+        $items          = (int) $params['items'];
+        $hash           = $params['hash']     ? '#' . $params['hash'] : '';
+        $this->page_var = $params['page_var'] ? $params['page_var']   : 'paged';
 
-        if ( isset( $this->params->data ) ) {
-            $custom_data = $this->params->data;
+        if ( isset( $params['data'] ) ) {
+            $custom_data = $params['data'];
         } else {
             $custom_data = null;
         }
@@ -258,15 +257,6 @@ class Pagination extends Helper {
 
         return $page_link;
     }
-
-    /**
-     * Set helper parameters.
-     *
-     * @param object $params Helper parameters.
-     */
-    public function set_params( $params ) {
-        $this->params = $params;
-    }
 }
 
-$this->add_helper( 'pagination', new Pagination() );
+Helper::register( dustpress()->twig, 'pagination', Pagination::class );

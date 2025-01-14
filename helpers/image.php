@@ -18,10 +18,10 @@ class Image extends Helper {
      *
      * @return string The HTML markup or an error message.
      */
-    public function output() {
+    public function init( string $content, array $params ): string {
 
         // Store the parameters.
-        $image_data = $this->get_image_data( $this->params );
+        $image_data = $this->get_image_data( $params );
 
         // If blog_id we are working on the network.
         if ( ! empty( $image_data['blog_id'] ) ) {
@@ -171,43 +171,43 @@ class Image extends Helper {
         ];
 
         // Store the images ID if it is given.
-        if ( isset( $params->id ) ) {
-            $image_data['id'] = (int) $params->id;
+        if ( isset( $params['id'] ) ) {
+            $image_data['id'] = (int) $params['id'];
         }
 
         // Add the src attribute to the data array if it is given.
-        if ( isset( $params->src ) ) {
-            $image_data['src'] = $params->src;
+        if ( isset( $params['src'] ) ) {
+            $image_data['src'] = $params['src'];
         }
 
         // Add the size attribute to the data array if it is given.
-        if ( isset( $params->size ) ) {
-            $image_data['size'] = $params->size;
+        if ( isset( $params['size'] ) ) {
+            $image_data['size'] = $params['size'];
         }
 
         // Add the srcset attribute to the data array if it is given.
-        if ( isset( $params->srcset ) ) {
-            $image_data['srcset'] = $params->srcset;
+        if ( isset( $params['srcset'] ) ) {
+            $image_data['srcset'] = $params['srcset'];
         }
 
         // Add the sizes attribute to the data array if it is given.
-        if ( isset( $params->sizes ) ) {
-            $image_data['sizes'] = $params->sizes;
+        if ( isset( $params['sizes'] ) ) {
+            $image_data['sizes'] = $params['sizes'];
         }
 
         // If a class string is given, store it to the meta params.
-        if ( isset( $params->class ) ) {
-            $image_data['attrs']['class'] = $params->class;
+        if ( isset( $params['class'] ) ) {
+            $image_data['attrs']['class'] = $params['class'];
         }
 
         // If an alt string is given, store it to the meta params.
-        if ( isset( $params->alt ) ) {
-            $image_data['attrs']['alt'] = $params->alt;
+        if ( isset( $params['alt'] ) ) {
+            $image_data['attrs']['alt'] = $params['alt'];
         }
 
         // If an alt string is given, store it to the meta params.
-        if ( isset( $params->blogid ) ) {
-            $image_data['blog_id'] = $params->blogid;
+        if ( isset( $params['blogid'] ) ) {
+            $image_data['blog_id'] = $params['blogid'];
         }
 
         $image_data = \apply_filters( 'dustpress/image/image_data', $image_data );
@@ -370,4 +370,4 @@ class Image extends Helper {
     }
 }
 // Add the helper.
-$this->add_helper( 'image', new Image() );
+Helper::register( dustpress()->twig, 'image', Image::class );

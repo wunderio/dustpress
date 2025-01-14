@@ -272,7 +272,7 @@ final class DustPress {
             $template = $this->get_template_filename( $debugs );
         }
         else {
-            // Use user-activate.php and user-activate.dust to replace wp-activate.php
+            // Use user-activate.php and user-activate.twig to replace wp-activate.php
             $template = apply_filters( 'dustpress/template/useractivate', 'UserActivate' );
             $debugs[] = $template;
             // Prevent 404 on multisite sub pages.
@@ -792,7 +792,9 @@ final class DustPress {
         $types = array(
             'html' => function( $data, $partial, $twig ) {
                 try {
-                    return $twig->render($partial . '.twig', $data);
+                    $template = $twig->load( $partial );
+
+                    return $template->render( $data );
                 } catch (\Twig\Error\LoaderError $e) {
                     http_response_code(500);
                     die('Twig error: Template not found - ' . $e->getMessage());
@@ -818,7 +820,7 @@ final class DustPress {
             }
         );
 
-        add_filter( 'dustpress/formats/use_dust/html', '__return_true' );
+        add_filter( 'dustpress/formats/use_twig/html', '__return_true' );
 
         $types = apply_filters( 'dustpress/formats', $types );
 
@@ -828,8 +830,8 @@ final class DustPress {
             $this->model->data['WP'] = $this->populate_data_collection();
         }
 
-        if ( apply_filters( 'dustpress/formats/use_dust/' . $type, false ) ) {
-            // Ensure we have a DustPHP instance.
+        if ( apply_filters( 'dustpress/formats/use_twig/' . $type, false ) ) {
+            // Ensure we have a Twig instance.
             if ( isset( $this->twig ) ) {
                 $twig = $this->twig;
             }
@@ -843,11 +845,7 @@ final class DustPress {
                 die( '<p><b>DustPress error:</b> No partial is given to the render function.</p>' );
             }
 
-            $dust->helpers = apply_filters( 'dustpress/helpers', $dust->helpers );
-
-            $dust->filters = apply_filters( 'dustpress/filters', $dust->filters );
-
-            // Fetch Dust partial by given name. Throw error if there is something wrong.
+            // Fetch partial by given name. Throw error if there is something wrong.
             try {
                 $template = $this->get_template( $partial );
             }
@@ -923,6 +921,8 @@ final class DustPress {
     private function get_template( $partial ) {
         $performance_measure_id = $this->start_dustpress_performance( __FUNCTION__ );
 
+        return $partial . '.twig';
+
         // Check if we have received an absolute path.
         if ( file_exists( $partial ) ) {
             $this->save_dustpress_performance( $performance_measure_id );
@@ -950,6 +950,9 @@ final class DustPress {
             }
 
             // If we could not find such template.
+
+            var_dump( $templates ); die;
+
             throw new Exception( 'Error loading template file: ' . $partial, 1 );
         }
     }
@@ -1470,7 +1473,7 @@ final class DustPress {
     public function get_prerender_file( $partial ) {
         $performance_measure_id = $this->start_dustpress_performance( __FUNCTION__ );
 
-        $templatefile =  $partial . '.dust';
+        $templatefile =  $partial . '.twig';
 
         $templates = $this->get_templates();
 
@@ -1512,7 +1515,7 @@ final class DustPress {
                 foreach ( $templatepaths as $templatepath ) {
                     if ( is_readable( $templatepath ) ) {
                         foreach ( new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $templatepath, RecursiveDirectoryIterator::SKIP_DOTS ) ) as $file ) {
-                            if ( is_readable( $file->getPathname() ) && substr( $file->getFilename(), -5 ) === '.dust' ) {
+                            if ( is_readable( $file->getPathname() ) && substr( $file->getFilename(), -5 ) === '.twig' ) {
                                 // Use only the first found template, do not override.
                                 if ( empty( $this->templates[ $file->getFilename() ] ) ) {
                                     $this->templates[ $file->getFilename() ] = $file->getPathname();
@@ -1564,7 +1567,7 @@ final class DustPress {
     *  @return	$param
     */
     public function add_filter( $name, $instance ) {
-        $this->dust->filters[ $name ] = $instance;
+        // Todo: Add filters
     }
 
     /**
@@ -1580,7 +1583,7 @@ final class DustPress {
     public function add_helper( $name, $instance ) {
         $performance_measure_id = $this->start_dustpress_performance( __FUNCTION__ );
 
-        $this->dust->helpers[ $name ] = $instance;
+        // Todo: Add helpers
 
         $this->save_dustpress_performance( $performance_measure_id );
     }

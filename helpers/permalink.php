@@ -2,9 +2,9 @@
 namespace DustPress;
 
 class Permalink extends Helper {
-    public function output() {
-    	if ( isset( $this->params->id ) ) {
-    		return get_permalink( $this->params->id );
+    public function init ( string $content, array $params ): string {
+    	if ( isset( $params['id'] ) ) {
+    		return get_permalink( $params['id'] );
     	}
     	else {
     		return get_permalink();
@@ -12,4 +12,4 @@ class Permalink extends Helper {
 	}
 }
 
-$this->dust->helpers['permalink'] = new Permalink();
+Helper::register( dustpress()->twig, 'permalink', Permalink::class );

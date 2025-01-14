@@ -14,39 +14,34 @@ namespace DustPress;
  * @package DustPress
  */
 class Password extends Helper {
-    public function init() {
-        $id      = $this->params->id ?? get_the_ID();
-        $no_form = isset( $this->params->no_form );
+    public function init( string $content, array $params ): string {
+        $id      = $params['id'] ?? get_the_ID();
+        $no_form = isset( $params['no_form'] );
 
         $post = get_post( $id );
 
         // If a password is not needed, render the content block as is
         if ( empty( $post->post_password ) || ! post_password_required( $id ) ) {
-            return $this->chunk->render( $this->bodies->block, $this->context );
+            return $content;
         }
 
-        if ( post_password_required( $id ) ) {
-
-            // If used like {@password no_form=anything} the contents are hidden,
-            // but no password_form partial will be rendered.
-            if ( $no_form ) {
-                return $this->chunk->write( '' );
-            }
-
-            // Populate data object to be passed to the password form template
-            $data        = new \stdClass();
-            $data->url   = esc_url( site_url( 'wp-login.php?action=postpass', 'login_post' ) );
-            $data->label = 'pwbox-' . $id;
-
-            return $this->chunk->write( dustpress()->render( [
-                'partial' => 'password_form',
-                'data'    => $data,
-                'echo'    => false,
-            ] ) );
+        // If used like {@password no_form=anything} the contents are hidden,
+        // but no password_form partial will be rendered.
+        if ( $no_form ) {
+            return '';
         }
 
-        return $this->chunk->render( $this->bodies->block, $this->context );
+        // Populate data object to be passed to the password form template
+        $data        = new \stdClass();
+        $data->url   = esc_url( site_url( 'wp-login.php?action=postpass', 'login_post' ) );
+        $data->label = 'pwbox-' . $id;
+
+        return dustpress()->render( [
+            'partial' => 'password_form',
+            'data'    => $data,
+            'echo'    => false,
+        ] );
     }
 }
 
-$this->dust->helpers['password'] = new Password();
+Helper::register( dustpress()->twig, 'password', Password::class );

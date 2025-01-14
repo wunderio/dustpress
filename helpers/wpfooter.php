@@ -2,11 +2,11 @@
 namespace DustPress;
 
 class WPFooter extends Helper {
-    public function output() {
+    public function init( string $content, array $params ): string {
 		ob_start();
 		wp_footer();
 		return ob_get_clean();
     }
 }
 
-$this->add_helper( 'wpfooter', new WPFooter() );
+Helper::register( dustpress()->twig, 'wpfooter', WPFooter::class );

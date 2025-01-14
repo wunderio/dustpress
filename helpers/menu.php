@@ -20,67 +20,67 @@ class Menu extends Helper {
      *
      * @return $output (string)
      */
-    public function output() {
+    public function init( string $content, array $params ): string {
 
-        if ( ! isset( $this->params->menu_name ) && ! isset( $this->params->menu_id ) ) {
-            return $this->chunk->write( 'DustPress menu helper error: No menu specified.' );
-        } else if ( isset( $this->params->menu_id ) ) {
-            $menu_id = $this->params->menu_id;
+        if ( ! isset( $params['menu_name'] ) && ! isset( $params['menu_id'] ) ) {
+            return 'DustPress menu helper error: No menu specified.';
+        } else if ( isset( $params['menu_id'] ) ) {
+            $menu_id = $params['menu_id'];
             $id_given = true;
         } else {
-            $menu_name = $this->params->menu_name;
+            $menu_name = $params['menu_name'];
         }
 
-        if ( isset( $this->params->parent ) ) {
-            $parent = $this->params->parent;
+        if ( isset( $params['parent'] ) ) {
+            $parent = $params['parent'];
         } else {
             $parent = 0;
         }
 
-        if ( isset( $this->params->depth ) ) {
-            $depth = $this->params->depth;
+        if ( isset( $params['depth'] ) ) {
+            $depth = $params['depth'];
         } else {
             $depth = PHP_INT_MAX;
         }
 
-        if ( isset( $this->params->override ) ) {
-            $override = $this->params->override;
+        if ( isset( $params['override'] ) ) {
+            $override = $params['override'];
         } else {
             $override = null;
         }
 
-        if ( isset( $this->params->ul_classes ) ) {
-            $ul_classes = $this->params->ul_classes;
+        if ( isset( $params['ul_classes'] ) ) {
+            $ul_classes = $params['ul_classes'];
         } else {
             $ul_classes = '';
         }
 
-        if ( isset( $this->params->ul_id ) ) {
-            $ul_id = $this->params->ul_id;
+        if ( isset( $params['ul_id'] ) ) {
+            $ul_id = $params['ul_id'];
         } else {
             $ul_id = '';
         }
 
-        if ( isset( $this->params->show_submenu ) ) {
-            $show_submenu = $this->params->show_submenu;
+        if ( isset( $params['show_submenu'] ) ) {
+            $show_submenu = $params['show_submenu'];
         } else {
             $show_submenu = true;
         }
 
-        if ( isset( $this->params->menu_partial ) ) {
-            $menu_partial = $this->params->menu_partial;
+        if ( isset( $params['menu_partial'] ) ) {
+            $menu_partial = $params['menu_partial'];
         } else {
             $menu_partial = "menu";
         }
 
-        if ( isset( $this->params->menuitem_partial ) ) {
-            $menuitem_partial = $this->params->menuitem_partial;
+        if ( isset( $params['menuitem_partial'] ) ) {
+            $menuitem_partial = $params['menuitem_partial'];
         } else {
             $menuitem_partial = "menuitem";
         }
 
-        if ( isset( $this->params->data ) ) {
-            $custom_data = $this->params->data;
+        if ( isset( $params['data'] ) ) {
+            $custom_data = $params['data'];
         } else {
             $custom_data = null;
         }
@@ -367,7 +367,7 @@ class Menu extends Helper {
     }
 }
 
-$this->add_helper( 'menu', new Menu() );
+Helper::register( dustpress()->twig, 'menu', Menu::class );
 
 // Add hook to delete menu items cache if a menu is updated.
 add_action( 'wp_update_nav_menu', [ Menu::class, 'delete_cached_menu_items' ], 1, 1 );

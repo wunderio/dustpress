@@ -1,73 +1,94 @@
 <?php
-/**
- * This file contains DustPress Helper class.
- */
 
 namespace DustPress;
 
-/**
- * Class Helper
- *
- * @package DustPress
- */
-class Helper {
-    /**
-     * Chunk object.
-     *
-     * @var \Dust\Evaluate\Chunk
-     */
-    protected $chunk;
-    /**
-     * Context object.
-     *
-     * @var \Dust\Evaluate\Context
-     */
-    protected $context;
-    /**
-     * Bodies to evaluate.
-     *
-     * @var \Dust\Evaluate\Bodies
-     */
-    protected $bodies;
-    /**
-     * Parameters.
-     *
-     * @var \Dust\Evaluate\Parameters
-     */
+use Twig\Environment;
+use Twig\TokenParser\AbstractTokenParser;
+use Twig\Token;
+use Twig\Node\Node;
+use Twig\Compiler;
+
+abstract class Helper {
     protected $params;
+    protected $content;
 
     /**
-     * Invoice Helper
+     * Process the block content and parameters.
      *
-     * @param \Dust\Evaluate\Chunk      $chunk   Chunk object.
-     * @param \Dust\Evaluate\Context    $context Context object.
-     * @param \Dust\Evaluate\Bodies     $bodies  Bodies to evaluate.
-     * @param \Dust\Evaluate\Parameters $params  Parameters object.
-     *
-     * @return \Dust\Evaluate\Chunk|void
+     * @param string $content The block content.
+     * @param array  $params  The parameters passed to the helper.
+     * @return string The processed output.
      */
-    public function __invoke(
-        \Dust\Evaluate\Chunk $chunk,
-        \Dust\Evaluate\Context $context,
-        \Dust\Evaluate\Bodies $bodies,
-        \Dust\Evaluate\Parameters $params
-    ) {
+    abstract public function init( string $content, array $params ): string;
 
-        $this->chunk   = $chunk;
-        $this->context = $context;
-        $this->bodies  = $bodies;
-        $this->params  = $params;
+    /**
+     * Registers the helper with Twig.
+     *
+     * @param Environment $twig The Twig environment.
+     * @param string      $name The name of the helper.
+     */
+    public static function register( Environment $twig, string $name, string $helperClass ) {
+        $twig->addTokenParser( new class( $name, $helperClass ) extends AbstractTokenParser {
+            private $name;
+            private $helperClass;
 
-        if ( isset( $this->bodies->dummy ) && method_exists( $this, 'prerun' ) ) {
-            $this->prerun();
-            return;
-        }
+            public function __construct( string $name, string $helperClass )
+            {
+                $this->name = $name;
+                $this->helperClass = $helperClass;
+            }
 
-        if ( ! isset( $this->bodies->dummy ) && method_exists( $this, 'init' ) ) {
-            return $this->init();
-        }
-        if ( ! isset( $this->bodies->dummy ) && method_exists( $this, 'output' ) ) {
-            return $this->chunk->write( $this->output() );
-        }
+            public function parse( Token $token )
+            {
+                $stream = $this->parser->getStream();
+
+                // Parse parameters
+                $params = [];
+                while (!$stream->test( Token::BLOCK_END_TYPE ) ) {
+                    $key = $stream->expect( Token::NAME_TYPE )->getValue();
+                    $stream->expect( Token::OPERATOR_TYPE, '=' );
+                    $value = $stream->expect( Token::STRING_TYPE )->getValue();
+                    $params[$key] = $value;
+                }
+                $stream->expect( Token::BLOCK_END_TYPE );
+
+                // Parse block content
+                $body = $this->parser->subparse( [ $this, 'decideBlockEnd' ], true );
+                $stream->expect( Token::BLOCK_END_TYPE );
+
+                return new class( $body, $params, $this->helperClass ) extends Node {
+                    private $helperClass;
+                    private $params;
+
+                    public function __construct( Node $body, array $params, string $helperClass )
+                    {
+                        $this->helperClass = $helperClass;
+                        $this->params = $params;
+                        parent::__construct( [ 'body' => $body ], [], $body->getTemplateLine() );
+                    }
+
+                    public function compile( Compiler $compiler )
+                    {
+                        $compiler
+                            ->write( "\$helper = new \\{$this->helperClass}();\n" )
+                            ->write( "\$params = " . var_export( $this->params, true ) . ";\n" )
+                            ->write( "ob_start();\n" )
+                            ->subcompile( $this->getNode( 'body' ) )
+                            ->write( "\$content = ob_get_clean();\n" )
+                            ->write( "echo \$helper->init(\$content, \$params);\n") ;
+                    }
+                };
+            }
+
+            public function decideBlockEnd( Token $token )
+            {
+                return $token->test( 'end' . $this->name );
+            }
+
+            public function getTag()
+            {
+                return $this->name;
+            }
+        });
     }
 }

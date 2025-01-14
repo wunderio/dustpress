@@ -2,11 +2,11 @@
 namespace DustPress;
 
 class WPHead extends Helper {
-    public function output() {
+    public function init( string $content, array $params ): string {
 		ob_start();
 		wp_head();
 		return ob_get_clean();
     }
 }
 
-$this->add_helper( 'wphead', new WPHead() );
+Helper::register( dustpress()->twig, 'wphead', WPHead::class );
