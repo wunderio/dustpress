@@ -1,12 +1,11 @@
 <?php
 /*
 Plugin Name: DustPress
-Plugin URI: http://www.geniem.com
+Plugin URI: http://github.com/wunderio/dustpress
 Description: Dust.js templating system for WordPress
-Author: Miika Arponen & Ville Siltala / Geniem Oy
-Author URI: http://www.geniem.com
+Author: Originally Geniem Oy, forked for Wunder Finland Oy by Miika Arponen
 License: GPLv3
-Version: 1.36.5
+Version: 1.36.6
 */
 
 final class DustPress {

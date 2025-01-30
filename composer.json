@@ -1,23 +1,19 @@
 {
-  "name": "devgeniem/dustpress",
+  "name": "wunderio/dustpress",
   "description": "WordPress Theme Framework.",
   "authors": [
     {
         "name": "Miika Arponen",
-        "email": "miika.arponen@geniem.com",
-        "homepage": "https://geniem.com/",
+        "email": "miika.arponen@wunder.io",
+        "homepage": "https://wunder.io/",
         "role": "Developer"
     },
     {
         "name": "Ville Siltala",
-        "email": "ville.siltala@geniem.com",
-        "homepage": "https://geniem.com/",
         "role": "Developer"
     },
     {
         "name": "Ismo Vuorinen",
-        "email": "ismo.vuorinen@geniem.com",
-        "homepage": "https://geniem.com/",
         "role": "Developer"
     }
   ],
@@ -30,7 +26,7 @@
     "files": ["dustpress.php"]
   },
   "require": {
-    "php": ">=7.1",
+    "php": ">=8.2",
     "ext-json": "*"
   },
   "conflict": {
